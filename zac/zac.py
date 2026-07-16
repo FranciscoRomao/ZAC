@@ -32,6 +32,7 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
         self.reuse = True
         self.resyn = True
         self.common_1q = 0
+        self.barrier_layers = set()
 
     def parse_setting(self, setting: dict):
         if "name" in setting:
@@ -160,7 +161,9 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
                         self.g_q.append([q0, q1])
                     else:
                         self.g_q.append([q1, q0])
-                elif ins.operation.name != "measure" and ins.operation.name != "barrier":
+                elif ins.operation.name == "barrier":
+                    self.g_q.append([-1, -1])
+                elif ins.operation.name != "measure":
                     offset = 0
                     if ins.qubits[0]._register != None:
                         offset = register_idx[ins.qubits[0]._register]
@@ -265,6 +268,12 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
         
         extra_reuse_qubit = 0
         for i in range(1, len(self.gate_scheduling)):
+            if i in self.barrier_layers:
+                self.reuse_qubit.append(set())
+                for gate_idx, gate in enumerate(self.gate_scheduling[i]):
+                    for q in gate:
+                        qubit_is_used[i][q] = gate_idx
+                continue
             # print("previous gate")
             # print(self.gate_scheduling[i - 1])
             # print("current gate")

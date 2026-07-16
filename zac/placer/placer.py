@@ -102,7 +102,7 @@ class Placer_mixin:
         intermediate_placer = VertexMatchingPlacer(deepcopy(self.qubit_mapping[0]))
         # print("self.reuse_qubit")
         # print(self.reuse_qubit)
-        intermediate_placer.run(self.architecture, self.qubit_mapping, self.gate_scheduling, self.dynamic_placement, self.reuse_qubit)
+        intermediate_placer.run(self.architecture, self.qubit_mapping, self.gate_scheduling, self.dynamic_placement, self.reuse_qubit, self.barrier_layers)
         self.qubit_mapping = intermediate_placer.mapping
         # for mapping in self.qubit_mapping:
         #     print(mapping)

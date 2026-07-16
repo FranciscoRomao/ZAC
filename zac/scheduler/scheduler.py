@@ -55,6 +55,12 @@ class Scheduler_mixin:
         gate_scheduling = []
         list_qubit_time = [0 for i in range(self.n_q)]
         for i, gate in enumerate(self.g_q):
+            if gate == [-1, -1]:
+                max_t = max(list_qubit_time) if list_qubit_time else 0
+                self.barrier_layers.add(max_t)
+                list_qubit_time = [max_t for _ in range(self.n_q)]
+                continue
+
             tq0 = list_qubit_time[gate[0]]
             tq1 = list_qubit_time[gate[1]]
             tg = max(tq0, tq1)
@@ -71,6 +77,8 @@ class Scheduler_mixin:
         graph = rx.PyGraph()
         graph.add_nodes_from(list(range(self.n_q)))
         for edge in self.g_q:
+            if edge == [-1, -1]:
+                continue
             graph.add_edge(edge[0], edge[1], edge)
         edge_colors = rx.graph_misra_gries_edge_color(graph)
         max_color = 0

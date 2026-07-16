@@ -613,8 +613,8 @@ class Router_mixin:
         for dependency_type in dependency:
             if isinstance(dependency[dependency_type], int):
                 inst_idx = dependency[dependency_type]
-                if begin_time < self.result_json['instructions'][inst_idx]["end_time"]:
-                    begin_time = self.result_json['instructions'][inst_idx]["end_time"]
+                if begin_time < self.result_json['instructions'][inst_idx].get("end_time", 0):
+                    begin_time = self.result_json['instructions'][inst_idx].get("end_time", 0)
             else:
                 # print(dependency_type)
                 # print(dependency[dependency_type])
@@ -629,7 +629,7 @@ class Router_mixin:
                             for detail_inst in self.result_json['instructions'][inst_idx]["insts"]:
                                 inst_type = detail_inst["type"].split(":")[0]
                                 if inst_type == "activate":
-                                    atom_transfer_finish_time = max(detail_inst["end_time"], atom_transfer_finish_time)
+                                    atom_transfer_finish_time = max(detail_inst.get("end_time", 0), atom_transfer_finish_time)
                             # find the time until dropping of the qubits
                             # atom_transfer_begin_time = 15
                             atom_transfer_begin_time = 0
@@ -637,7 +637,7 @@ class Router_mixin:
                                 # print(detail_inst["type"].split(":"))
                                 inst_type = detail_inst["type"].split(":")[0]
                                 if inst_type == "deactivate":
-                                    atom_transfer_begin_time = max(detail_inst["begin_time"], atom_transfer_begin_time)
+                                    atom_transfer_begin_time = max(detail_inst.get("begin_time", 0), atom_transfer_begin_time)
                                     break
                             tmp_begin_time = atom_transfer_finish_time - atom_transfer_begin_time
                             if begin_time < tmp_begin_time:
@@ -647,12 +647,12 @@ class Router_mixin:
                             # print("atom_transfer_begin_time: ", atom_transfer_begin_time)
                             # print("begin time for site depend: ", tmp_begin_time)
                         else:
-                            if begin_time < self.result_json['instructions'][inst_idx]["end_time"]:
-                                begin_time = self.result_json['instructions'][inst_idx]["end_time"]
+                            if begin_time < self.result_json['instructions'][inst_idx].get("end_time", 0):
+                                begin_time = self.result_json['instructions'][inst_idx].get("end_time", 0)
                 else:
                     for inst_idx in dependency[dependency_type]:
-                        if begin_time < self.result_json['instructions'][inst_idx]["end_time"]:
-                            begin_time = self.result_json['instructions'][inst_idx]["end_time"]
+                        if begin_time < self.result_json['instructions'][inst_idx].get("end_time", 0):
+                            begin_time = self.result_json['instructions'][inst_idx].get("end_time", 0)
         return begin_time
     
     def get_duration(self, inst: dict):

@@ -16,7 +16,10 @@ class VertexMatchingPlacer:
         self.cost_atom_transfer = 0.9999
         self.n_qubit = len(mapping)
 
-    def run(self, architecture, qubit_mapping, list_gate, dynamic_placement, list_reuse_qubits):
+    def run(self, architecture, qubit_mapping, list_gate, dynamic_placement, list_reuse_qubits, barrier_layers=None):
+        if barrier_layers is None:
+            barrier_layers = set()
+        self.barrier_layers = barrier_layers
         self.architecture = architecture
         self.list_reuse_qubit = list_reuse_qubits
         print("[INFO] ZAC: Minimum-weight-full-matching-based intermediate placement: Start")
@@ -362,7 +365,7 @@ class VertexMatchingPlacer:
             dict_qubit_interaction[q] = []
         
 
-        if len(list_gate) > 1:
+        if len(list_gate) > 1 and ((layer + 1) not in getattr(self, 'barrier_layers', set())):
             for gate in list_gate[1]:
                 if gate[0] in dict_qubit_interaction and ((not test_reuse) or (gate[1] not in self.list_reuse_qubit[layer])):
                     dict_qubit_interaction[gate[0]].append(gate[1])

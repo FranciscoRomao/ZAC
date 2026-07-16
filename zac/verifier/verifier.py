@@ -21,7 +21,7 @@ class Verifier_mixin:
                     print("[Error] Qubit {} is already used in gate {}, but is involved in gate {} at the same stage ({}) again.".format(q1, qubit_gate[q1], gate, i))
         
         for i, t in enumerate(time_gate_scheduled):
-            if t == -1:
+            if t == -1 and self.g_q[i] != [-1, -1]:
                 success = False
                 print("[Error] Gate {} is not scheduled.".format(i))
         if success:
