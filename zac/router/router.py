@@ -29,14 +29,25 @@ class Router_mixin:
         self.site_dependency = dict()
         self.write_initial_instruction()
         
-        
+        self.result_json["execution_segments"] = []
+        current_segment_start_idx = 0
 
         for layer in range(len(self.gate_scheduling)):
+            if layer in getattr(self, "barrier_layers", set()) and layer != 0:
+                segment_insts = self.result_json['instructions'][current_segment_start_idx:]
+                self.result_json["execution_segments"].append(segment_insts)
+                current_segment_start_idx = len(self.result_json['instructions'])
+
             # extract sets of movement that can be perform simultaneously
             t_s = time.time()
             self.route_qubit_mis(layer)
             time_mis += (time.time() - t_s)
             print("[INFO] ZAC: Solve for Rydberg stage {}/{}. mis time={:2f}".format(layer+1, len(self.gate_scheduling), time_mis))
+            
+        final_insts = self.result_json['instructions'][current_segment_start_idx:]
+        if final_insts:
+            self.result_json["execution_segments"].append(final_insts)
+
         self.flatten_rearrangment_instruction()
         self.runtime_analysis["routing"] = time_mis
 
