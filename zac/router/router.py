@@ -435,9 +435,12 @@ class Router_mixin:
             self.write_gate_instruction(inst_idx, rydberg_idx, result_gate, dependency)
         
         # process single-qubit gates
+        list_1q_gate = self.gate_1q_scheduling[layer]
         inst_idx = len(self.result_json['instructions'])
         result_gate = []
         set_qubit_dependency = set()
+        for qubit in self.gate_1q_barrier_qubits[layer]:
+            set_qubit_dependency.add(self.qubit_dependency[qubit])
         for gate_info in list_1q_gate:
             # collect qubit dependency
             set_qubit_dependency.add(self.qubit_dependency[gate_info[1]])
@@ -478,7 +481,8 @@ class Router_mixin:
     def write_1q_gate_instruction(self, inst_idx: int, result_gate: list, dependency: dict, gate_mapping: list):
         locs = []
         for gate in result_gate:
-            locs.append((gate["q"], gate_mapping[gate["q"]][0], gate_mapping[gate["q"]][1], gate_mapping[gate["q"]][2]))
+            locs.append((gate["q"], gate_mapping[gate["q"]][0],
+                        gate_mapping[gate["q"]][1], gate_mapping[gate["q"]][2]))
 
         self.result_json['instructions'].append(
             {
@@ -1004,4 +1008,3 @@ class Router_mixin:
             detail_inst["id"] = inst_counter
 
         return details
-                    

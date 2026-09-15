@@ -33,6 +33,10 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
         self.resyn = True
         self.common_1q = 0
         self.barrier_layers = set()
+        # Maps a barrier marker's g_q index to the qubits it fences.
+        self.barrier_qubits = {}
+        # Maps a barrier marker's g_q index to its ASAP layer.
+        self.barrier_times = {}
 
     def parse_setting(self, setting: dict):
         if "name" in setting:
@@ -115,6 +119,9 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
         # assume that the qubit indices used are consecutively 0, 1, ...
         self.g_q = []
         self.dict_g_1q_parent = {-1: []}
+        self.barrier_layers = set()
+        self.barrier_qubits = {}
+        self.barrier_times = {}
         print("[INFO] ZAC: Parse Circuit")
         file_type = benchmark.split('.')[-1]
         if file_type == "qasm" or file_type == 'qpy':
@@ -146,7 +153,21 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
                     idx_begin += qubit._register.size
             instruction = cz_circuit.data
             for ins in instruction:
-                if ins.operation.num_qubits == 2:
+                # Check barriers before arity: a scoped two-qubit barrier is
+                # not a two-qubit gate.
+                if ins.operation.name == "barrier":
+                    barrier_qubits = set()
+                    for qubit in ins.qubits:
+                        offset = 0
+                        if qubit._register != None:
+                            offset = register_idx[qubit._register]
+                        barrier_qubits.add(offset + qubit._index)
+                    barrier_index = len(self.g_q)
+                    self.barrier_qubits[barrier_index] = barrier_qubits
+                    self.g_q.append([-1, -1])
+                    for qubit in barrier_qubits:
+                        list_qubit_last_2q_gate[qubit] = barrier_index
+                elif ins.operation.num_qubits == 2:
                     offset = 0
                     if ins.qubits[0]._register != None:
                         offset = register_idx[ins.qubits[0]._register]
@@ -161,8 +182,6 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
                         self.g_q.append([q0, q1])
                     else:
                         self.g_q.append([q1, q0])
-                elif ins.operation.name == "barrier":
-                    self.g_q.append([-1, -1])
                 elif ins.operation.name != "measure":
                     offset = 0
                     if ins.qubits[0]._register != None:

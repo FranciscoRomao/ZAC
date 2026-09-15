@@ -25,26 +25,49 @@ class Scheduler_mixin:
             # break
         
         self.gate_scheduling_idx = []
-        for gates in result_scheduling:
+        self.barriers_per_scheduled_layer = []
+        barriers_by_time = {}
+        for barrier_index, barrier_time in self.barrier_times.items():
+            barriers_by_time.setdefault(barrier_time, []).append(barrier_index)
+
+        for logical_layer, gates in enumerate(result_scheduling):
+            barrier_indices = barriers_by_time.get(logical_layer, [])
             if len(gates) < max_gate_num:
                 self.gate_scheduling_idx.append(gates)
+                self.barriers_per_scheduled_layer.append(barrier_indices)
             else:
                 num_layer = math.ceil(len(gates) / max_gate_num)
                 gates_per_layer = math.ceil(len(gates) / num_layer)
-                for i in range(0, len(gates), gates_per_layer):
-                    self.gate_scheduling_idx.append(gates[i: i + gates_per_layer])
+                for chunk_start in range(0, len(gates), gates_per_layer):
+                    self.gate_scheduling_idx.append(
+                        gates[chunk_start: chunk_start + gates_per_layer]
+                    )
+                    self.barriers_per_scheduled_layer.append(
+                        barrier_indices if chunk_start == 0 else []
+                    )
 
         self.gate_scheduling = []
         self.gate_1q_scheduling = []
+        self.gate_1q_barrier_qubits = []
 
-        for gates in self.gate_scheduling_idx:
+        for gates, barrier_indices in zip(
+            self.gate_scheduling_idx, self.barriers_per_scheduled_layer
+        ):
             tmp = [self.g_q[i] for i in gates]
             self.gate_scheduling.append(tmp)
             self.gate_1q_scheduling.append([])
+            self.gate_1q_barrier_qubits.append(set())
             for gate_idx in gates:
                 if gate_idx in self.dict_g_1q_parent:
                     for gate_1q in self.dict_g_1q_parent[gate_idx]:
                         self.gate_1q_scheduling[-1].append(gate_1q)
+            for barrier_index in barrier_indices:
+                self.gate_1q_scheduling[-1].extend(
+                    self.dict_g_1q_parent.get(barrier_index, [])
+                )
+                self.gate_1q_barrier_qubits[-1].update(
+                    self.barrier_qubits[barrier_index]
+                )
         
         self.runtime_analysis["scheduling"] = time.time()- t_s
         
@@ -54,11 +77,29 @@ class Scheduler_mixin:
         # as soon as possible algorithm for self.g_q
         gate_scheduling = []
         list_qubit_time = [0 for i in range(self.n_q)]
+        self.barrier_times = {}
         for i, gate in enumerate(self.g_q):
             if gate == [-1, -1]:
-                max_t = max(list_qubit_time) if list_qubit_time else 0
-                self.barrier_layers.add(max_t)
-                list_qubit_time = [max_t for _ in range(self.n_q)]
+                # Old callers can still provide a bare marker, which retains
+                # the historical full-circuit-barrier behavior.
+                barrier_qubits = getattr(self, "barrier_qubits", {}).get(
+                    i, set(range(self.n_q))
+                )
+                max_t = max((list_qubit_time[q] for q in barrier_qubits), default=0)
+                for q in barrier_qubits:
+                    list_qubit_time[q] = max_t
+                self.barrier_times[i] = max_t
+
+                barrier_1q_gates = self.dict_g_1q_parent.get(i, [])
+                if barrier_1q_gates:
+                    while len(gate_scheduling) <= max_t:
+                        gate_scheduling.append([])
+                    for _, qubit in barrier_1q_gates:
+                        list_qubit_time[qubit] = max_t + 1
+
+                # Only an all-qubit barrier is an execution/placement boundary.
+                if barrier_qubits == set(range(self.n_q)):
+                    self.barrier_layers.add(max_t)
                 continue
 
             tq0 = list_qubit_time[gate[0]]
