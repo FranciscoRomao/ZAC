@@ -31,12 +31,20 @@ class Router_mixin:
         
         self.result_json["execution_segments"] = []
         current_segment_start_idx = 0
+        barrier_layers = getattr(self, "barrier_layers", {})
+        if not isinstance(barrier_layers, dict):
+            barrier_layers = {layer: 1 for layer in barrier_layers}
+        last_barrier_layer = max(barrier_layers, default=-1)
+        layer_count = max(len(self.gate_scheduling), last_barrier_layer + 1)
 
-        for layer in range(len(self.gate_scheduling)):
-            if layer in getattr(self, "barrier_layers", set()) and layer != 0:
+        for layer in range(layer_count):
+            for _ in range(barrier_layers.get(layer, 0)):
                 segment_insts = self.result_json['instructions'][current_segment_start_idx:]
                 self.result_json["execution_segments"].append(segment_insts)
                 current_segment_start_idx = len(self.result_json['instructions'])
+
+            if layer >= len(self.gate_scheduling):
+                continue
 
             # extract sets of movement that can be perform simultaneously
             t_s = time.time()
@@ -45,7 +53,7 @@ class Router_mixin:
             print("[INFO] ZAC: Solve for Rydberg stage {}/{}. mis time={:2f}".format(layer+1, len(self.gate_scheduling), time_mis))
             
         final_insts = self.result_json['instructions'][current_segment_start_idx:]
-        if final_insts:
+        if final_insts or barrier_layers:
             self.result_json["execution_segments"].append(final_insts)
 
         self.flatten_rearrangment_instruction()

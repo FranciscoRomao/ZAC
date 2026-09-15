@@ -183,6 +183,46 @@ class ScopedBarrierEndToEndTest(unittest.TestCase):
         self.assert_after(h_after, h_before)
         self.assert_after(later_full_barrier_gate, h_after)
 
+    def test_consecutive_full_barriers_preserve_empty_segment_multiplicity(self):
+        circuit = QuantumCircuit(5)
+        circuit.cx(0, 1)
+        circuit.h(0)
+        circuit.barrier()
+        circuit.barrier()
+        circuit.cx(2, 3)
+        circuit.h(4)
+
+        result = self.compile(circuit, "consecutive_full_barriers")
+
+        self.assertEqual(len(result["execution_segments"]), 3)
+
+    def test_trailing_full_barrier_creates_an_empty_final_segment(self):
+        circuit = QuantumCircuit(5)
+        circuit.cx(0, 1)
+        circuit.h(0)
+        circuit.cx(2, 3)
+        circuit.h(2)
+        circuit.barrier()
+
+        result = self.compile(circuit, "trailing_full_barrier")
+
+        self.assertEqual(len(result["execution_segments"]), 2)
+        self.assertEqual(result["execution_segments"][-1], [])
+
+    def test_consecutive_trailing_full_barriers_preserve_both_empty_segments(self):
+        circuit = QuantumCircuit(5)
+        circuit.cx(0, 1)
+        circuit.h(0)
+        circuit.cx(2, 3)
+        circuit.h(2)
+        circuit.barrier()
+        circuit.barrier()
+
+        result = self.compile(circuit, "consecutive_trailing_full_barriers")
+
+        self.assertEqual(len(result["execution_segments"]), 3)
+        self.assertEqual(result["execution_segments"][-2:], [[], []])
+
 
 if __name__ == "__main__":
     unittest.main()

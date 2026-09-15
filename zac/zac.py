@@ -32,7 +32,8 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
         self.reuse = True
         self.resyn = True
         self.common_1q = 0
-        self.barrier_layers = set()
+        # Counts all-circuit barrier occurrences by their ASAP layer.
+        self.barrier_layers = {}
         # Maps a barrier marker's g_q index to the qubits it fences.
         self.barrier_qubits = {}
         # Maps a barrier marker's g_q index to its ASAP layer.
@@ -119,7 +120,7 @@ class ZAC(Scheduler_mixin, Placer_mixin, Router_mixin, Verifier_mixin, Animator)
         # assume that the qubit indices used are consecutively 0, 1, ...
         self.g_q = []
         self.dict_g_1q_parent = {-1: []}
-        self.barrier_layers = set()
+        self.barrier_layers = {}
         self.barrier_qubits = {}
         self.barrier_times = {}
         print("[INFO] ZAC: Parse Circuit")

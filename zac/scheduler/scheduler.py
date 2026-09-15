@@ -91,15 +91,18 @@ class Scheduler_mixin:
                 self.barrier_times[i] = max_t
 
                 barrier_1q_gates = self.dict_g_1q_parent.get(i, [])
-                if barrier_1q_gates:
+                is_full_barrier = barrier_qubits == set(range(self.n_q))
+                if is_full_barrier or barrier_1q_gates:
                     while len(gate_scheduling) <= max_t:
                         gate_scheduling.append([])
                     for _, qubit in barrier_1q_gates:
                         list_qubit_time[qubit] = max_t + 1
 
                 # Only an all-qubit barrier is an execution/placement boundary.
-                if barrier_qubits == set(range(self.n_q)):
-                    self.barrier_layers.add(max_t)
+                if is_full_barrier:
+                    self.barrier_layers[max_t] = (
+                        self.barrier_layers.get(max_t, 0) + 1
+                    )
                 continue
 
             tq0 = list_qubit_time[gate[0]]

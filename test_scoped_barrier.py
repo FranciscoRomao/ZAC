@@ -39,7 +39,7 @@ class ScopedBarrierTest(unittest.TestCase):
 
         self.assertEqual(compiler.barrier_qubits, {1: {0, 1}})
         self.assertEqual(compiler.asap(), [[0, 2], [3]])
-        self.assertEqual(compiler.barrier_layers, set())
+        self.assertEqual(compiler.barrier_layers, {})
 
     def test_full_barrier_remains_an_execution_boundary(self):
         circuit = QuantumCircuit(4)
@@ -51,7 +51,7 @@ class ScopedBarrierTest(unittest.TestCase):
 
         self.assertEqual(compiler.barrier_qubits, {1: {0, 1, 2, 3}})
         self.assertEqual(compiler.asap(), [[0], [2]])
-        self.assertEqual(compiler.barrier_layers, {1})
+        self.assertEqual(compiler.barrier_layers, {1: 1})
 
     def test_one_qubit_gate_after_scoped_barrier_waits_for_the_barrier(self):
         circuit = QuantumCircuit(5)
